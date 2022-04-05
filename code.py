@@ -5,6 +5,9 @@ import displayio
 from adafruit_magtag.magtag import MagTag
 from rainbowio import colorwheel
 
+# from adafruit_bitmap_font import bitmap_font
+from adafruit_display_text.label import Label
+
 def main():
     magtag = MagTag()
     display = magtag.display
@@ -20,6 +23,22 @@ def main():
     tilegrid = displayio.TileGrid(bitmap=ring_bitmap(), pixel_shader=palette, x=0, y=0, width=6, height=3)
 
     display_things.append(tilegrid)
+
+    label = Label(
+        terminalio.FONT,
+        anchor_point=(0.5, 0.5),
+        text="Hello, World",
+        scale=3,
+        color=0x000000,
+        padding_top=3,
+        padding_bottom=3,
+        padding_left=3,
+        padding_right=3,
+        background_color=0xffffff,
+        anchored_position=((magtag.graphics.display.width // 2), (magtag.graphics.display.height // 2)),
+    )
+    display_things.append(label)
+
     display.show(display_things)
 
     magtag.refresh()
