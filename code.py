@@ -1,13 +1,16 @@
 import time
 import board
 import terminalio
+import alarm
 import displayio
 from adafruit_magtag.peripherals import Peripherals
+from adafruit_magtag.network import Network
 from rainbowio import colorwheel
 
-# from adafruit_bitmap_font import bitmap_font
-from adafruit_display_text.label import Label
+from adafruit_bitmap_font import bitmap_font
+from adafruit_display_text.bitmap_label import Label
 
+font = bitmap_font.load_font("fonts/PermianSansTypeface-12.bdf")
 
 def main():
     display = board.DISPLAY
@@ -15,40 +18,51 @@ def main():
 
     display_things = displayio.Group(scale=1)
 
-    palette = displayio.Palette(4)
-    palette[3] = 0x000000
-    palette[2] = 0x666666
-    palette[1] = 0x999999
-    palette[0] = 0xFFFFFF
+    # palette = displayio.Palette(4)
+    # palette[3] = 0x000000
+    # palette[2] = 0x666666
+    # palette[1] = 0x999999
+    # palette[0] = 0xFFFFFF
 
-    tilegrid = displayio.TileGrid(
-        bitmap=ring_bitmap(), pixel_shader=palette, x=0, y=0, width=6, height=3
-    )
+    # tilegrid = displayio.TileGrid(
+    #     bitmap=ring_bitmap(), pixel_shader=palette, x=0, y=0, width=6, height=3
+    # )
 
-    display_things.append(tilegrid)
+    # display_things.append(tilegrid)
+
+
+    network = Network()
+
+#     network.connect()
+    calendar = network.fetch("http://192.168.0.17:5000/").text
+#    calendar_text = calendar.encode('ascii', 'ignore').decode('ascii')
+    calendar_text = calendar
+    print(calendar_text)
+#    calendar_text = '\n'.join(f"{entry['time']}   {entry['summary']}" for entry in calendar)
+#    print(calendar)
+
 
     label = Label(
-        terminalio.FONT,
-        anchor_point=(0.5, 0.5),
-        text="Hello, World",
-        scale=3,
+        font,
+        anchor_point=(0.0, 0.0),
+        text=calendar_text,
         color=0x000000,
         padding_top=3,
         padding_bottom=3,
         padding_left=3,
         padding_right=3,
+        line_spacing=0.9,
         background_color=0xFFFFFF,
-        anchored_position=(
-            (display.width // 2),
-            (display.height // 2),
-        ),
+        anchored_position=(5, 5)
     )
     display_things.append(label)
 
     display.show(display_things)
     refresh(display)
 
-    run_rainbow_leds(peripherals)
+#    run_rainbow_leds(peripherals)
+    time_alarm = alarm.time.TimeAlarm(monotonic_time=time.monotonic() + 120)
+    alarm.exit_and_deep_sleep_until_alarms(time_alarm)
 
 
 def refresh(display):
