@@ -3,6 +3,7 @@ import asyncio
 import board
 import terminalio
 import alarm
+import sleep_storage
 import displayio
 from adafruit_magtag.peripherals import Peripherals
 from adafruit_magtag.network import Network
@@ -19,6 +20,7 @@ DARK_GREY = 0x666666
 BLACK = 0x000000
 
 async def main():
+    print("Woken: ", alarm.wake_alarm)
     display = board.DISPLAY
     peripherals = Peripherals()
 
@@ -43,17 +45,20 @@ async def main():
 
     # display_things.append(tilegrid)
 
-    try:
-        peripherals.neopixel_disable = False
-        peripherals.neopixels.fill(0xff00ff)
-        calendar_text = fetch_calendar()
-    except RuntimeError:
-        calendar_text = "Could not fetch calendar"
-    finally:
-        peripherals.neopixel_disable = True
+    if isinstance(alarm.wake_alarm, alarm.pin.PinAlarm):
+        calendar_text = sleep_storage.read_string(0)
+    else:
+        try:
+            peripherals.neopixel_disable = False
+            peripherals.neopixels.fill(0xff00ff)
+            calendar_text = fetch_calendar()
+        except RuntimeError:
+            calendar_text = "Could not fetch calendar"
+        finally:
+            peripherals.neopixel_disable = True
 
     # calendar_text = calendar
-    # print(calendar_text)
+    print(len(calendar_text))
 
 #    calendar_text = "Today: Minimal viable code!"
 #    calendar_text = '\n'.join(f"{entry['time']}   {entry['summary']}" for entry in calendar)
@@ -95,17 +100,18 @@ async def main():
     display.show(screen)
     refresh_required.set()
 
-    # time_alarm = alarm.time.TimeAlarm(monotonic_time=time.monotonic() + 120)
-    # alarm.exit_and_deep_sleep_until_alarms(time_alarm)
+    sleep_time = time.monotonic() + 10
 
-    while True:
+    while time.monotonic() < sleep_time:
         if peripherals.button_b_pressed:
+            sleep_time = time.monotonic() + 10
             print("A is pressed")
             if screen[1] != calendar_screen:
                 screen[1] = calendar_screen
             refresh_required.set()
 
         elif peripherals.button_c_pressed:
+            sleep_time = time.monotonic() + 10
             print("B is pressed")
             battery_label.text = f"Battery: {peripherals.battery} V"
             if screen[1] != battery_screen:
@@ -113,10 +119,18 @@ async def main():
             refresh_required.set()
 
         elif peripherals.button_d_pressed:
+            sleep_time = time.monotonic() + 10
             asyncio.create_task(run_rainbow_leds(peripherals))
 
         await asyncio.sleep(0.1)
 
+    peripherals.deinit()
+
+    sleep_storage.store_string(0, calendar_text)
+
+    time_alarm = alarm.time.TimeAlarm(monotonic_time=time.monotonic() + 120)
+    pin_alarm = alarm.pin.PinAlarm(pin=board.BUTTON_A, value=False, pull=True)
+    alarm.exit_and_deep_sleep_until_alarms(time_alarm, pin_alarm)
 
 def button_labels(display, label_texts):
     labels = []
@@ -150,6 +164,7 @@ def start_screen_refresh(display):
 async def screen_refresher(display, refresh_required):
     while True:
         await refresh_required.wait()
+        print("Waiting until I can refresh the screen.")
         await asyncio.sleep(display.time_to_refresh + 0.1)
         refresh_required.clear()
         print(display.time_to_refresh, display.busy)
