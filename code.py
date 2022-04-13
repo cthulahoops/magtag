@@ -24,10 +24,12 @@ async def main():
 
     refresh_required = start_screen_refresh(display)
 
+    screen = displayio.Group()
     calendar_screen = displayio.Group()
     battery_screen = displayio.Group()
 
-    calendar_screen.append(background(display, WHITE))
+    screen.append(background(display, WHITE))
+    screen.append(calendar_screen)
 
     # palette = displayio.Palette(4)
     # palette[3] = BLACK
@@ -73,7 +75,7 @@ async def main():
     calendar_screen.append(calendar_label)
 
     for label in button_labels(display, ["O", "Calendar", "Battery", "Rainbows"]):
-        calendar_screen.append(label)
+        screen.append(label)
 
     battery_label = Label(
         font,
@@ -90,8 +92,7 @@ async def main():
     )
     battery_screen.append(battery_label)
 
-    active_display = calendar_screen
-    display.show(active_display)
+    display.show(screen)
     refresh_required.set()
 
     # time_alarm = alarm.time.TimeAlarm(monotonic_time=time.monotonic() + 120)
@@ -100,15 +101,15 @@ async def main():
     while True:
         if peripherals.button_b_pressed:
             print("A is pressed")
-            active_display = calendar_screen
-            display.show(active_display)
+            if screen[1] != calendar_screen:
+                screen[1] = calendar_screen
             refresh_required.set()
 
         elif peripherals.button_c_pressed:
             print("B is pressed")
             battery_label.text = f"Battery: {peripherals.battery} V"
-            active_display = battery_screen
-            display.show(active_display)
+            if screen[1] != battery_screen:
+                screen[1] = battery_screen
             refresh_required.set()
 
         elif peripherals.button_d_pressed:
