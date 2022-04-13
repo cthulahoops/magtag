@@ -12,26 +12,6 @@ from adafruit_display_text.bitmap_label import Label
 
 font = bitmap_font.load_font("fonts/PermianSansTypeface-11.bdf")
 
-def button_labels(display, label_texts):
-    labels = []
-    for (i, text) in enumerate(label_texts):
-        labels.append(Label(
-               font,
-               anchor_point=(0.5, 0.0),
-               text=text,
-               color=0xffffff,
-               padding_top=3,
-               padding_bottom=3,
-               padding_left=3,
-               padding_right=3,
-               line_spacing=0.9,
-               background_color=0x000000,
-               anchored_position=((2 * i + 1) * display.width / 8.0 - 12.0, display.height - 25),
-               base_alignment=True,
-        ))
-    return labels
-
-
 def main():
     display = board.DISPLAY
     peripherals = Peripherals()
@@ -51,9 +31,15 @@ def main():
 
     # display_things.append(tilegrid)
 
+    try:
+        peripherals.neopixel_disable = False
+        peripherals.neopixels.fill(0xff00ff)
+        calendar_text = fetch_calendar()
+    except RuntimeError:
+        calendar_text = "Could not fetch calendar"
+    finally:
+        peripherals.neopixel_disable = True
 
-    network = Network()
-    calendar_text = network.fetch("http://192.168.0.17:5000/").text
     # calendar_text = calendar
     # print(calendar_text)
 
@@ -121,7 +107,32 @@ def main():
         time.sleep(0.1)
 
 
+def button_labels(display, label_texts):
+    labels = []
+    for (i, text) in enumerate(label_texts):
+        labels.append(Label(
+               font,
+               anchor_point=(0.5, 0.0),
+               text=text,
+               color=0xffffff,
+               padding_top=3,
+               padding_bottom=3,
+               padding_left=3,
+               padding_right=3,
+               line_spacing=0.9,
+               background_color=0x000000,
+               anchored_position=((2 * i + 1) * display.width / 8.0 - 12.0, display.height - 25),
+               base_alignment=True,
+        ))
+    return labels
+
+
+def fetch_calendar():
+    network = Network()
+    return network.fetch("http://192.168.0.17:5000/").text
+
 def refresh(display):
+
     while True:
         try:
             display.refresh()
