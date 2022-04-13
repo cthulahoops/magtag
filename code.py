@@ -1,4 +1,5 @@
 import time
+import asyncio
 import board
 import terminalio
 import alarm
@@ -12,9 +13,11 @@ from adafruit_display_text.bitmap_label import Label
 
 font = bitmap_font.load_font("fonts/PermianSansTypeface-11.bdf")
 
-def main():
+async def main():
     display = board.DISPLAY
     peripherals = Peripherals()
+
+    refresh_required = start_screen_refresh(display)
 
     calendar_screen = displayio.Group()
     battery_screen = displayio.Group()
@@ -82,7 +85,7 @@ def main():
 
     active_display = calendar_screen
     display.show(active_display)
-    refresh(display)
+    refresh_required.set()
 
     # time_alarm = alarm.time.TimeAlarm(monotonic_time=time.monotonic() + 120)
     # alarm.exit_and_deep_sleep_until_alarms(time_alarm)
@@ -92,19 +95,19 @@ def main():
             print("A is pressed")
             active_display = calendar_screen
             display.show(active_display)
-            refresh(display)
+            refresh_required.set()
 
         elif peripherals.button_c_pressed:
             print("B is pressed")
             battery_label.text = f"Battery: {peripherals.battery} V"
             active_display = battery_screen
             display.show(active_display)
-            refresh(display)
+            refresh_required.set()
 
         elif peripherals.button_d_pressed:
-            run_rainbow_leds(peripherals)
+            asyncio.create_task(run_rainbow_leds(peripherals))
 
-        time.sleep(0.1)
+        await asyncio.sleep(0.1)
 
 
 def button_labels(display, label_texts):
@@ -131,16 +134,18 @@ def fetch_calendar():
     network = Network()
     return network.fetch("http://192.168.0.17:5000/").text
 
-def refresh(display):
+def start_screen_refresh(display):
+    refresh_required = asyncio.Event()
+    asyncio.create_task(screen_refresher(display, refresh_required))
+    return refresh_required
 
+async def screen_refresher(display, refresh_required):
     while True:
-        try:
-            display.refresh()
-            return
-        except RuntimeError:
-            print("Too soon.")
-            time.sleep(1.0)
-
+        await refresh_required.wait()
+        await asyncio.sleep(display.time_to_refresh + 0.1)
+        refresh_required.clear()
+        print(display.time_to_refresh, display.busy)
+        display.refresh()
 
 def in_ring(center, x, y, radius=20, thickness=1):
     return (
@@ -164,7 +169,7 @@ def ring_bitmap():
     return bitmap
 
 
-def run_rainbow_leds(peripherals):
+async def run_rainbow_leds(peripherals):
     peripherals.neopixel_disable = False
     pixels = peripherals.neopixels
 
@@ -175,8 +180,8 @@ def run_rainbow_leds(peripherals):
         for i in range(pixels.n):
             pixels[i] = colorwheel((t + i * 8) & 255)
 
-        time.sleep(0.05)
+        await asyncio.sleep(0.05)
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
