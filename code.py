@@ -10,13 +10,34 @@ from rainbowio import colorwheel
 from adafruit_bitmap_font import bitmap_font
 from adafruit_display_text.bitmap_label import Label
 
-font = bitmap_font.load_font("fonts/PermianSansTypeface-12.bdf")
+font = bitmap_font.load_font("fonts/PermianSansTypeface-11.bdf")
+
+def button_labels(display, label_texts):
+    labels = []
+    for (i, text) in enumerate(label_texts):
+        labels.append(Label(
+               font,
+               anchor_point=(0.5, 0.0),
+               text=text,
+               color=0xffffff,
+               padding_top=3,
+               padding_bottom=3,
+               padding_left=3,
+               padding_right=3,
+               line_spacing=0.9,
+               background_color=0x000000,
+               anchored_position=((2 * i + 1) * display.width / 8.0 - 12.0, display.height - 25),
+               base_alignment=True,
+        ))
+    return labels
+
 
 def main():
     display = board.DISPLAY
     peripherals = Peripherals()
 
-    display_things = displayio.Group(scale=1)
+    calendar_screen = displayio.Group()
+    battery_screen = displayio.Group()
 
     # palette = displayio.Palette(4)
     # palette[3] = 0x000000
@@ -32,17 +53,15 @@ def main():
 
 
     network = Network()
+    calendar_text = network.fetch("http://192.168.0.17:5000/").text
+    # calendar_text = calendar
+    # print(calendar_text)
 
-#     network.connect()
-    calendar = network.fetch("http://192.168.0.17:5000/").text
-#    calendar_text = calendar.encode('ascii', 'ignore').decode('ascii')
-    calendar_text = calendar
-    print(calendar_text)
+#    calendar_text = "Today: Minimal viable code!"
 #    calendar_text = '\n'.join(f"{entry['time']}   {entry['summary']}" for entry in calendar)
 #    print(calendar)
 
-
-    label = Label(
+    calendar_label = Label(
         font,
         anchor_point=(0.0, 0.0),
         text=calendar_text,
@@ -55,14 +74,51 @@ def main():
         background_color=0xFFFFFF,
         anchored_position=(5, 5)
     )
-    display_things.append(label)
+    calendar_screen.append(calendar_label)
 
-    display.show(display_things)
+    for label in button_labels(display, ["O", "Calendar", "Battery", "Rainbows"]):
+        calendar_screen.append(label)
+
+    battery_label = Label(
+        font,
+        anchor_point=(0.0, 0.0),
+        text=f"Battery: {peripherals.battery} V",
+        color=0x000000,
+        padding_top=3,
+        padding_bottom=3,
+        padding_left=3,
+        padding_right=3,
+        line_spacing=0.9,
+        background_color=0xFFFFFF,
+        anchored_position=(5, 5)
+    )
+    battery_screen.append(battery_label)
+
+    active_display = calendar_screen
+    display.show(active_display)
     refresh(display)
 
-#    run_rainbow_leds(peripherals)
-    time_alarm = alarm.time.TimeAlarm(monotonic_time=time.monotonic() + 120)
-    alarm.exit_and_deep_sleep_until_alarms(time_alarm)
+    # time_alarm = alarm.time.TimeAlarm(monotonic_time=time.monotonic() + 120)
+    # alarm.exit_and_deep_sleep_until_alarms(time_alarm)
+
+    while True:
+        if peripherals.button_b_pressed:
+            print("A is pressed")
+            active_display = calendar_screen
+            display.show(active_display)
+            refresh(display)
+
+        elif peripherals.button_c_pressed:
+            print("B is pressed")
+            battery_label.text = f"Battery: {peripherals.battery} V"
+            active_display = battery_screen
+            display.show(active_display)
+            refresh(display)
+
+        elif peripherals.button_d_pressed:
+            run_rainbow_leds(peripherals)
+
+        time.sleep(0.1)
 
 
 def refresh(display):
