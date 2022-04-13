@@ -13,6 +13,11 @@ from adafruit_display_text.bitmap_label import Label
 
 font = bitmap_font.load_font("fonts/PermianSansTypeface-11.bdf")
 
+WHITE = 0xffffff
+LIGHT_GREY = 0x999999
+DARK_GREY = 0x666666
+BLACK = 0x000000
+
 async def main():
     display = board.DISPLAY
     peripherals = Peripherals()
@@ -22,11 +27,13 @@ async def main():
     calendar_screen = displayio.Group()
     battery_screen = displayio.Group()
 
+    calendar_screen.append(background(display, WHITE))
+
     # palette = displayio.Palette(4)
-    # palette[3] = 0x000000
-    # palette[2] = 0x666666
-    # palette[1] = 0x999999
-    # palette[0] = 0xFFFFFF
+    # palette[3] = BLACK
+    # palette[2] = DARK_GREY
+    # palette[1] = WHITE_GREY
+    # palette[0] = WHITE
 
     # tilegrid = displayio.TileGrid(
     #     bitmap=ring_bitmap(), pixel_shader=palette, x=0, y=0, width=6, height=3
@@ -54,13 +61,13 @@ async def main():
         font,
         anchor_point=(0.0, 0.0),
         text=calendar_text,
-        color=0x000000,
+        color=BLACK,
         padding_top=3,
         padding_bottom=3,
         padding_left=3,
         padding_right=3,
         line_spacing=0.9,
-        background_color=0xFFFFFF,
+        background_color=WHITE,
         anchored_position=(5, 5)
     )
     calendar_screen.append(calendar_label)
@@ -72,13 +79,13 @@ async def main():
         font,
         anchor_point=(0.0, 0.0),
         text=f"Battery: {peripherals.battery} V",
-        color=0x000000,
+        color=BLACK,
         padding_top=3,
         padding_bottom=3,
         padding_left=3,
         padding_right=3,
         line_spacing=0.9,
-        background_color=0xFFFFFF,
+        background_color=WHITE,
         anchored_position=(5, 5)
     )
     battery_screen.append(battery_label)
@@ -117,13 +124,13 @@ def button_labels(display, label_texts):
                font,
                anchor_point=(0.5, 0.0),
                text=text,
-               color=0xffffff,
+               color=BLACK,
                padding_top=3,
                padding_bottom=3,
                padding_left=3,
                padding_right=3,
                line_spacing=0.9,
-               background_color=0x000000,
+               background_color=LIGHT_GREY,
                anchored_position=((2 * i + 1) * display.width / 8.0 - 12.0, display.height - 25),
                base_alignment=True,
         ))
@@ -182,6 +189,12 @@ async def run_rainbow_leds(peripherals):
 
         await asyncio.sleep(0.05)
 
+
+def background(display, color):
+    color_bitmap = displayio.Bitmap(display.width, display.height, 1)
+    color_palette = displayio.Palette(1)
+    color_palette[0] = color
+    return displayio.TileGrid(color_bitmap, pixel_shader=color_palette, x=0, y=0)
 
 if __name__ == "__main__":
     asyncio.run(main())
