@@ -23,14 +23,19 @@ BLACK = 0x000000
 
 
 async def main():
-    print("Woken: ", alarm.wake_alarm)
     display = board.DISPLAY
     peripherals = Peripherals()
     network = Network()
 
+    print("Woken: ", alarm.wake_alarm)
+
     refresh_required = start_screen_refresh(display)
 
     if isinstance(alarm.wake_alarm, alarm.pin.PinAlarm):
+        if alarm.wake_alarm.pin == board.BUTTON_A:
+            switch_light(network)
+        elif alarm.wake_alarm.pin == board.BUTTON_D:
+            asyncio.create_task(run_rainbow_leds(peripherals))
         calendar_text = sleep_storage.read_string(0)
     else:
         try:
@@ -60,18 +65,12 @@ async def main():
             print("B is pressed")
             await asyncio.sleep(2.0)
 #            refresh_required.set()
-
         elif peripherals.button_b_pressed:
             sleep_time = time.monotonic() + 10
             print("B is pressed")
             refresh_required.set()
-
         elif peripherals.button_c_pressed:
-            sleep_time = time.monotonic() + 10
-            print("C is pressed")
-            calendar.text = f"Battery: {peripherals.battery} V"
-            refresh_required.set()
-
+            pass
         elif peripherals.button_d_pressed:
             sleep_time = time.monotonic() + 10
             asyncio.create_task(run_rainbow_leds(peripherals))
@@ -91,6 +90,24 @@ async def main():
         for button in [board.BUTTON_A, board.BUTTON_B]
     ]
     alarm.exit_and_deep_sleep_until_alarms(time_alarm, *pin_alarms)
+
+async def handle_buttons(peripherals, network):
+    print("Handling buttons!")
+    if peripherals.button_a_pressed:
+        switch_light(network)
+        await asyncio.sleep(1.0)
+    elif peripherals.button_d_pressed:
+        asyncio.create_task(run_rainbow_leds(peripherals))
+
+def switch_light(network):
+    print("Switching light.")
+    network.connect()
+    print("Connected to network.")
+    response = network._wifi.requests.post(
+        "http://wren.local:8123/api/services/switch/toggle",
+        headers={"Authorization": "Bearer " + secrets.key},
+        json={"entity_id": "switch.tasmota"})
+    print(response)
 
 
 def first_n_lines(text, n):
