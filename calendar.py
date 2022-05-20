@@ -30,8 +30,6 @@ async def main():
 
     print("Woken: ", alarm.wake_alarm)
 
-    refresh_required = start_screen_refresh(display)
-
     if isinstance(alarm.wake_alarm, alarm.pin.PinAlarm):
         if alarm.wake_alarm.pin == board.BUTTON_A:
             switch_light(network)
@@ -45,16 +43,14 @@ async def main():
         except RuntimeError:
             calendar_text = "Could not fetch calendar"
         sleep_storage.store_string(0, calendar_text)
-        refresh_required.set()
     else:
         calendar_text = sleep_storage.read_string(0)
-        refresh_required.set()
 
     print("Calendar length: ", len(calendar_text))
     print("Creating UI:", time.monotonic())
     screen = create_ui(display, calendar_text, peripherals.battery, ["O", None, None, "Rainbows"])
     print("UI done!", time.monotonic())
-
+    await refresh_screen_when_ready(display)
     deep_sleep(peripherals)
 
 def deep_sleep(peripherals):
@@ -155,19 +151,6 @@ def fetch_calendar(network):
     network.connect()
     return network.fetch("http://192.168.0.32:5000/").text
 
-def start_screen_refresh(display):
-    refresh_required = asyncio.Event()
-    asyncio.create_task(screen_refresher(display, refresh_required))
-    return refresh_required
-
-async def screen_refresher(display, refresh_required):
-    print("Screen refresher starting.")
-    while True:
-        await refresh_required.wait()
-        await refresh_screen_when_ready(display)
-        refresh_required.clear()
-
-
 async def refresh_screen_when_ready(display):
     print("Waiting until I can refresh the screen.")
     while display.time_to_refresh > 0:
@@ -175,7 +158,6 @@ async def refresh_screen_when_ready(display):
     print(display.time_to_refresh, display.busy)
     await asyncio.sleep(1.0)
     display.refresh()
-
 
 async def run_rainbow_leds(peripherals):
     peripherals.neopixel_disable = False
