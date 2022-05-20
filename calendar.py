@@ -14,7 +14,7 @@ import secrets
 from adafruit_bitmap_font import bitmap_font
 from adafruit_display_text.bitmap_label import Label
 
-font = bitmap_font.load_font("fonts/PermianSansTypeface-11.bdf")
+font = bitmap_font.load_font("fonts/Arial-12.pcf")
 
 WHITE = 0xffffff
 LIGHT_GREY = 0x999999
@@ -34,19 +34,15 @@ async def main():
         calendar_text = sleep_storage.read_string(0)
     else:
         try:
-            peripherals.neopixel_disable = False
-            peripherals.neopixels.fill(0xff00ff)
             calendar_text = fetch_calendar(network)
         except RuntimeError:
             calendar_text = "Could not fetch calendar"
-        finally:
-            peripherals.neopixel_disable = True
 
         refresh_required.set()
 
     print("Calendar length: ", len(calendar_text))
     print("Creating UI:", time.monotonic())
-    screen = create_ui(display, calendar_text, peripherals.battery, ["X", "Calendar", "Battery", "Rainbows"])
+    screen = create_ui(display, calendar_text, peripherals.battery, ["O", "Calendar", None, "Rainbows"])
     print("UI done!", time.monotonic())
 
     sleep_time = time.monotonic() + 3600
@@ -106,11 +102,8 @@ def create_ui(display, calendar_text, battery_voltage, button_label_texts):
     battery_screen = displayio.Group()
 
     screen = displayio.Group()
-    calendar_screen = displayio.Group()
-    battery_screen = displayio.Group()
 
     screen.append(background(display, WHITE))
-    screen.append(calendar_screen)
 
     calendar_label = Label(
         font,
@@ -125,15 +118,15 @@ def create_ui(display, calendar_text, battery_voltage, button_label_texts):
         background_color=WHITE,
         anchored_position=(0, 0)
     )
-    calendar_screen.append(calendar_label)
+    screen.append(calendar_label)
 
     for label in button_labels(display, button_label_texts):
         screen.append(label)
 
     battery_label = Label(
         font,
-        anchor_point=(0.0, 0.0),
-        text=f"Battery: {battery_voltage} V",
+        anchor_point=(1.0, 0.0),
+        text=f"{battery_voltage:.2f} V",
         color=BLACK,
         padding_top=3,
         padding_bottom=3,
@@ -141,15 +134,17 @@ def create_ui(display, calendar_text, battery_voltage, button_label_texts):
         padding_right=3,
         line_spacing=0.9,
         background_color=WHITE,
-        anchored_position=(5, 5)
+        anchored_position=(display.width, 0)
     )
-    battery_screen.append(battery_label)
+    screen.append(battery_label)
     display.show(screen)
     return screen
 
 def button_labels(display, label_texts):
     labels = []
     for (i, text) in enumerate(label_texts):
+        if not text:
+            continue
         labels.append(Label(
                font,
                anchor_point=(0.5, 0.0),
@@ -185,33 +180,12 @@ async def screen_refresher(display, refresh_required):
 
 
 async def refresh_screen_when_ready(display):
-        print("Waiting until I can refresh the screen.")
-        while display.time_to_refresh > 0:
-            await asyncio.sleep(display.time_to_refresh)
-        print(display.time_to_refresh, display.busy)
-        await asyncio.sleep(1.0)
-        display.refresh()
-
-def in_ring(center, x, y, radius=20, thickness=1):
-    return (
-        (radius - thickness) ** 2
-        < (x - center[0]) ** 2 + (y - center[1]) ** 2
-        < (radius + thickness) ** 2
-    )
-
-
-def ring_bitmap():
-    bitmap = displayio.Bitmap(51, 51, 4)
-    for x in range(51):
-        for y in range(51):
-            if any(
-                in_ring(center, x, y, radius=32)
-                for center in [(0, 0), (50, 0), (0, 50), (50, 50)]
-            ):
-                bitmap[x, y] = 3
-            else:
-                bitmap[x, y] = 0
-    return bitmap
+    print("Waiting until I can refresh the screen.")
+    while display.time_to_refresh > 0:
+        await asyncio.sleep(display.time_to_refresh)
+    print(display.time_to_refresh, display.busy)
+    await asyncio.sleep(1.0)
+    display.refresh()
 
 
 async def run_rainbow_leds(peripherals):
