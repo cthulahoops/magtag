@@ -34,6 +34,7 @@ async def main():
     if isinstance(alarm.wake_alarm, alarm.pin.PinAlarm):
         if alarm.wake_alarm.pin == board.BUTTON_A:
             switch_light(network)
+            deep_sleep(peripherals)
         elif alarm.wake_alarm.pin == board.BUTTON_D:
             asyncio.create_task(run_rainbow_leds(peripherals))
         calendar_text = sleep_storage.read_string(0)
@@ -47,24 +48,15 @@ async def main():
 
     print("Calendar length: ", len(calendar_text))
     print("Creating UI:", time.monotonic())
-    screen = create_ui(display, calendar_text, peripherals.battery, ["O", "Calendar", None, "Rainbows"])
+    screen = create_ui(display, calendar_text, peripherals.battery, ["O", None, None, "Rainbows"])
     print("UI done!", time.monotonic())
 
-    sleep_time = time.monotonic() + 3600
+    sleep_time = time.monotonic() + 3
 
     while time.monotonic() < sleep_time:
         if peripherals.button_a_pressed:
-            print("Button A")
-            network.connect()
-            print("Connected")
-            response = network._wifi.requests.post(
-                "http://wren.local:8123/api/services/switch/toggle",
-                headers={"Authorization": "Bearer " + secrets.key},
-                json={"entity_id": "switch.tasmota"})
-            # sleep_time = time.monotonic() + 10
-            print("B is pressed")
+            switch_light(network)
             await asyncio.sleep(2.0)
-#            refresh_required.set()
         elif peripherals.button_b_pressed:
             sleep_time = time.monotonic() + 10
             print("B is pressed")
@@ -77,14 +69,13 @@ async def main():
 
         await asyncio.sleep(0.1)
 
-    peripherals.deinit()
-
     sleep_storage.store_string(0, calendar_text)
+    deep_sleep(peripherals)
 
-    print("Ready to sleep!")
-
+def deep_sleep(peripherals):
+    print("Time to sleep")
+    peripherals.deinit()
     time_alarm = alarm.time.TimeAlarm(monotonic_time=time.monotonic() + 120)
-
     pin_alarms = [
         alarm.pin.PinAlarm(pin=button, value=False, pull=True)
         for button in [board.BUTTON_A, board.BUTTON_B]
@@ -105,7 +96,7 @@ def switch_light(network):
     print("Connected to network.")
     response = network._wifi.requests.post(
         "http://wren.local:8123/api/services/switch/toggle",
-        headers={"Authorization": "Bearer " + secrets.key},
+        headers={"Authorization": "Bearer " + secrets.home_assistant_token},
         json={"entity_id": "switch.tasmota"})
     print(response)
 
