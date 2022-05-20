@@ -21,6 +21,7 @@ LIGHT_GREY = 0x999999
 DARK_GREY = 0x666666
 BLACK = 0x000000
 
+CALENDAR_REFRESH_TIME = 3600
 
 async def main():
     display = board.DISPLAY
@@ -38,12 +39,15 @@ async def main():
         elif alarm.wake_alarm.pin == board.BUTTON_D:
             asyncio.create_task(run_rainbow_leds(peripherals))
         calendar_text = sleep_storage.read_string(0)
-    else:
+    elif isinstance(alarm.wake_alarm, alarm.time.TimeAlarm):
         try:
             calendar_text = fetch_calendar(network)
         except RuntimeError:
             calendar_text = "Could not fetch calendar"
-
+        sleep_storage.store_string(0, calendar_text)
+        refresh_required.set()
+    else:
+        calendar_text = sleep_storage.read_string(0)
         refresh_required.set()
 
     print("Calendar length: ", len(calendar_text))
@@ -51,34 +55,15 @@ async def main():
     screen = create_ui(display, calendar_text, peripherals.battery, ["O", None, None, "Rainbows"])
     print("UI done!", time.monotonic())
 
-    sleep_time = time.monotonic() + 3
-
-    while time.monotonic() < sleep_time:
-        if peripherals.button_a_pressed:
-            switch_light(network)
-            await asyncio.sleep(2.0)
-        elif peripherals.button_b_pressed:
-            sleep_time = time.monotonic() + 10
-            print("B is pressed")
-            refresh_required.set()
-        elif peripherals.button_c_pressed:
-            pass
-        elif peripherals.button_d_pressed:
-            sleep_time = time.monotonic() + 10
-            asyncio.create_task(run_rainbow_leds(peripherals))
-
-        await asyncio.sleep(0.1)
-
-    sleep_storage.store_string(0, calendar_text)
     deep_sleep(peripherals)
 
 def deep_sleep(peripherals):
     print("Time to sleep")
     peripherals.deinit()
-    time_alarm = alarm.time.TimeAlarm(monotonic_time=time.monotonic() + 120)
+    time_alarm = alarm.time.TimeAlarm(monotonic_time=time.monotonic() + CALENDAR_REFRESH_TIME)
     pin_alarms = [
         alarm.pin.PinAlarm(pin=button, value=False, pull=True)
-        for button in [board.BUTTON_A, board.BUTTON_B]
+        for button in [board.BUTTON_A, board.BUTTON_D]
     ]
     alarm.exit_and_deep_sleep_until_alarms(time_alarm, *pin_alarms)
 
@@ -98,7 +83,7 @@ def switch_light(network):
         "http://wren.local:8123/api/services/switch/toggle",
         headers={"Authorization": "Bearer " + secrets.home_assistant_token},
         json={"entity_id": "switch.tasmota"})
-    print(response)
+    print(response.status_code)
 
 
 def first_n_lines(text, n):
