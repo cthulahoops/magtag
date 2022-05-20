@@ -1,7 +1,6 @@
 import time
 import asyncio
 import board
-import terminalio
 import alarm
 import sleep_storage
 import displayio
@@ -36,7 +35,8 @@ async def main():
             deep_sleep(peripherals)
         elif alarm.wake_alarm.pin == board.BUTTON_D:
             asyncio.create_task(run_rainbow_leds(peripherals))
-        calendar_text = sleep_storage.read_string(0)
+            await asyncio.sleep(60.0)
+            deep_sleep(peripherals)
     elif isinstance(alarm.wake_alarm, alarm.time.TimeAlarm):
         try:
             calendar_text = fetch_calendar(network)
