@@ -115,10 +115,6 @@ def first_n_lines(text, n):
 
 def create_ui(display, calendar_text, battery_voltage, button_label_texts):
     screen = displayio.Group()
-    calendar_screen = displayio.Group()
-    battery_screen = displayio.Group()
-
-    screen = displayio.Group()
 
     screen.append(background(display, WHITE))
 
