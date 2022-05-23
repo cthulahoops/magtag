@@ -41,7 +41,7 @@ async def main():
             deep_sleep(peripherals)
     elif isinstance(alarm.wake_alarm, alarm.time.TimeAlarm) or not calendar_text:
         calendar_text = fetch_calendar(network)
-        sleep_storage.store_string(0, calendar_text)
+        sleep_storage.store_string(0, calendar_text[:2047]) # TRUNCATING calendar because of limited sleep storage.
 
     await draw_screen(display, calendar_text, peripherals.battery)
 
