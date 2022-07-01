@@ -44,28 +44,29 @@ def main():
 
 
 MQTT_TOPIC = "state/peace/soil-sensor"
-DEVICE_ID = format_mac_address(wifi.radio.mac_address)
-DEVICE = (
-    {
-        "name": "STEMMA Soil Sensor",
-        "identifiers": [DEVICE_ID],
-        "manufacturer": "Adafruit",
-        "connections": [["mac", DEVICE_ID], ["ipv4", str(wifi.radio.ipv4_address)]],
-    },
-)
 
 
 def send_discovery(mqtt_client):
+    device_id = format_mac_address(wifi.radio.mac_address)
+    device = (
+        {
+            "name": "STEMMA Soil Sensor",
+            "identifiers": [device_id],
+            "manufacturer": "Adafruit",
+            "connections": [["mac", device_id], ["ipv4", str(wifi.radio.ipv4_address)]],
+        },
+    )
+
     mqtt_client.publish(
         "homeassistant/sensor/peace-soil-sensor-moisture/config",
         json.dumps(
             {
                 "name": "Peace Lily Moisture",
                 "state_topic": MQTT_TOPIC,
-                "device": DEVICE,
+                "device": device,
                 "unit_of_measurement": "unknown",
                 "value_template": "{{ value_json.moisture }}",
-                "unique_id": DEVICE_ID + "-moisture",
+                "unique_id": device_id + "-moisture",
             }
         ),
     )
@@ -76,10 +77,10 @@ def send_discovery(mqtt_client):
             {
                 "name": "Peace Lily Temperature",
                 "state_topic": MQTT_TOPIC,
-                "device": DEVICE,
+                "device": device,
                 "unit_of_measurement": "°C",
                 "value_template": "{{ value_json.temperature }}",
-                "unique_id": DEVICE_ID + ".temperature",
+                "unique_id": device_id + ".temperature",
             }
         ),
     )
