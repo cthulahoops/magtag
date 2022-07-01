@@ -15,8 +15,32 @@ except ImportError:
     raise
 
 
-def format_mac_address(address_binary):
-    return ":".join("{:02X}".format(x) for x in address_binary)
+def main():
+    soil_sensor = Seesaw(board.STEMMA_I2C(), addr=0x36)
+
+    wifi.radio.connect(secrets["ssid"], secrets["password"])
+
+    mqtt_client = MQTT.MQTT(
+        broker=secrets["mqtt_broker"],
+        port=secrets["mqtt_port"],
+        username=secrets["mqtt_username"],
+        password=secrets["mqtt_password"],
+        socket_pool=socketpool.SocketPool(wifi.radio),
+        ssl_context=ssl.create_default_context(),
+    )
+
+    mqtt_client.connect()
+
+    send_discovery(mqtt_client)
+
+    while True:
+        data = {
+            "temperature": soil_sensor.get_temp(),
+            "moisture": soil_sensor.moisture_read(),
+        }
+        print(data)
+        mqtt_client.publish(MQTT_TOPIC, json.dumps(data))
+        time.sleep(120)
 
 
 MQTT_TOPIC = "state/peace/soil-sensor"
@@ -61,32 +85,8 @@ def send_discovery(mqtt_client):
     )
 
 
-def main():
-    soil_sensor = Seesaw(board.STEMMA_I2C(), addr=0x36)
-
-    wifi.radio.connect(secrets["ssid"], secrets["password"])
-
-    mqtt_client = MQTT.MQTT(
-        broker=secrets["mqtt_broker"],
-        port=secrets["mqtt_port"],
-        username=secrets["mqtt_username"],
-        password=secrets["mqtt_password"],
-        socket_pool=socketpool.SocketPool(wifi.radio),
-        ssl_context=ssl.create_default_context(),
-    )
-
-    mqtt_client.connect()
-
-    send_discovery(mqtt_client)
-
-    while True:
-        data = {
-            "temperature": soil_sensor.get_temp(),
-            "moisture": soil_sensor.moisture_read(),
-        }
-        print(data)
-        mqtt_client.publish(MQTT_TOPIC, json.dumps(data))
-        time.sleep(120)
+def format_mac_address(address_binary):
+    return ":".join("{:02X}".format(x) for x in address_binary)
 
 
 if __name__ == "__main__":
