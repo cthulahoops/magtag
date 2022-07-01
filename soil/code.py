@@ -1,6 +1,7 @@
 import time
 import ssl
 import json
+import traceback
 
 import socketpool
 import board
@@ -91,4 +92,11 @@ def format_mac_address(address_binary):
 
 
 if __name__ == "__main__":
-    main()
+    while True:
+        try:
+            main()
+        except Exception as exception:
+            traceback.print_exception(
+                type(exception), exception, exception.__traceback__
+            )
+        time.sleep(120)
