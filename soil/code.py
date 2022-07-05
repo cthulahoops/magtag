@@ -49,14 +49,12 @@ def main():
 
 def send_discovery(mqtt_client):
     device_id = format_mac_address(wifi.radio.mac_address)
-    device = (
-        {
-            "name": "STEMMA Soil Sensor",
-            "identifiers": [device_id],
-            "manufacturer": "Adafruit",
-            "connections": [["mac", device_id], ["ipv4", str(wifi.radio.ipv4_address)]],
-        },
-    )
+    device = {
+        "name": "STEMMA Soil Sensor",
+        "identifiers": [device_id],
+        "manufacturer": "Adafruit",
+        "connections": [["mac", device_id], ["ipv4", str(wifi.radio.ipv4_address)]],
+    }
 
     mqtt_client.publish(
         "homeassistant/sensor/peace-soil-sensor-moisture/config",
