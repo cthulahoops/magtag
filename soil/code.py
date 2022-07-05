@@ -16,6 +16,9 @@ except ImportError:
     raise
 
 
+MQTT_TOPIC = "state/peace/soil-sensor"
+PUBLISH_INTERVAL_SECONDS = 300
+
 def main():
     soil_sensor = Seesaw(board.STEMMA_I2C(), addr=0x36)
 
@@ -41,10 +44,7 @@ def main():
         }
         print(data)
         mqtt_client.publish(MQTT_TOPIC, json.dumps(data))
-        time.sleep(120)
-
-
-MQTT_TOPIC = "state/peace/soil-sensor"
+        time.sleep(PUBLISH_INTERVAL_SECONDS)
 
 
 def send_discovery(mqtt_client):
@@ -68,6 +68,7 @@ def send_discovery(mqtt_client):
                 "unit_of_measurement": "unknown",
                 "value_template": "{{ value_json.moisture }}",
                 "unique_id": device_id + "-moisture",
+                "expire_after": 2 * PUBLISH_INTERVAL_SECONDS,
             }
         ),
     )
@@ -82,6 +83,7 @@ def send_discovery(mqtt_client):
                 "unit_of_measurement": "°C",
                 "value_template": "{{ value_json.temperature }}",
                 "unique_id": device_id + ".temperature",
+                "expire_after": 2 * PUBLISH_INTERVAL_SECONDS,
             }
         ),
     )
